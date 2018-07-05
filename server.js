@@ -1,0 +1,32 @@
+/** @namespace socket.decoded_token */
+const cors = require('cors')();
+const express = require('express');
+const app = express();
+app.enable('trust proxy');
+require('dotenv').config();
+const bluebird = require('bluebird');
+global.fs = bluebird.promisifyAll(require("fs"));
+const bodyParser = require('body-parser');
+global.riderPrefix = "rider";
+global.driverPrefix = "driver";
+global.publicDir = __dirname + "/public/";
+global.mysql = require('./models/mysql');
+global.baseData = [];
+global.serviceTree = [];
+global.drivers = {};
+global.riders = {};
+app.use(cors);
+app.options('*', cors);
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use('/img', express.static(__dirname + "/public/img"));
+app.use(require("./libs/express-router"));
+let server = require('http').createServer(app);
+const io = require("socket.io").listen(server);
+global.operatorsNamespace = require("./libs/operator")(io);
+require("./libs/client")(io);
+require('./libs/update-handler').init();
+process.on('unhandledRejection', r => console.log(r));
+server.listen(process.env.MAIN_PORT, function () {
+    console.log("Listening on " + process.env.MAIN_PORT);
+});
